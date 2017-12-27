@@ -1,5 +1,4 @@
 #!/bin/bash
-#aaa
 # Authors:
 #    LT Thomas <ltjr@ti.com>
 #    Chase Maupin
@@ -421,7 +420,7 @@ cat << EOM
 
    Detected device has $PARTS partitions already
 
-   Re-partitioning will allow the choice of 2/3/5 partitions
+   Re-partitioning will allow the choice of 2/3 partitions
 
 ################################################################################
 
@@ -454,7 +453,6 @@ cat << EOM
 	Select 2 partitions if only need boot and rootfs (most users).
 	Select 3 partitions if need SDK & other content on SD card.  This is
         usually used by device manufacturers with access to partition tarballs.
-	Select 5 partitions. This is used to support Advantech OTA.
 
 	****WARNING**** continuing will erase all data on $DEVICEDRIVENAME
 
@@ -465,14 +463,14 @@ EOM
 	while [ $ENTERCORRECTLY -ne 1 ]
 	do
 
-		read -p 'Number of partitions needed [2/3/5] : ' CASEPARTITIONNUMBER
+		read -p 'Number of partitions needed [2/3] : ' CASEPARTITIONNUMBER
 		echo ""
 		echo " "
 		ENTERCORRECTLY=1
 		case $CASEPARTITIONNUMBER in
 		"2")  echo "Now partitioning $DEVICEDRIVENAME with 2 partitions...";PARTITION=2;;
 		"3")  echo "Now partitioning $DEVICEDRIVENAME with 3 partitions...";PARTITION=3;;
-		"5")  echo "Now partitioning $DEVICEDRIVENAME with 5 partitions...";PARTITION=5;;
+#		"5")  echo "Now partitioning $DEVICEDRIVENAME with 5 partitions...";PARTITION=5;;
 		"n")  exit;;
 		*)  echo "Please enter 2 or 3";ENTERCORRECTLY=0;;
 		esac
@@ -623,33 +621,6 @@ MISC_START=`expr $CYLINDERS - 98`
 MISC_END=`expr $CYLINDERS - 97`
 CACHE_START=`expr $CYLINDERS - 96`
 
-#CYLINDERS=`echo $SIZE/255/63/512 | bc`
-#ROOTFS_END=`expr $CYLINDERS - 133`
-#RECOVERY_START=`expr $CYLINDERS - 133`
-#RECOVERY_END=`expr $CYLINDERS - 124`
-#EXT_START=`expr $CYLINDERS - 123`
-#MISC_START=`expr $CYLINDERS - 123`
-#MISC_END=`expr $CYLINDERS - 122`
-#CACHE_START=`expr $CYLINDERS - 121`
-
-#CYLINDERS=`echo $SIZE/255/63/512 | bc`
-#ROOTFS_END=`expr $CYLINDERS - 147`
-#RECOVERY_START=`expr $CYLINDERS - 147`
-#RECOVERY_END=`expr $CYLINDERS - 138`
-#EXT_START=`expr $CYLINDERS - 137`
-#MISC_START=`expr $CYLINDERS - 137`
-#MISC_END=`expr $CYLINDERS - 136`
-#CACHE_START=`expr $CYLINDERS - 135`
-
-#CYLINDERS=`echo $SIZE/255/63/512 | bc`
-#ROOTFS_END=`expr $CYLINDERS - 282`
-#RECOVERY_START=`expr $CYLINDERS - 282`
-#RECOVERY_END=`expr $CYLINDERS - 273`
-#EXT_START=`expr $CYLINDERS - 272`
-#MISC_START=`expr $CYLINDERS - 272`
-#MISC_END=`expr $CYLINDERS - 271`
-#CACHE_START=`expr $CYLINDERS - 270`
-
 parted -s $DRIVE mklabel msdos
 parted -s $DRIVE unit cyl mkpart primary fat32 -- 0 9
 parted -s $DRIVE set 1 boot on
@@ -759,7 +730,7 @@ mkdir $START_DIR/tmp
 export PATH_TO_SDBOOT=boot
 export PATH_TO_SDROOTFS=rootfs
 export PATH_TO_TMP_DIR=$START_DIR/tmp
-if [ "$PARTS" -eq "5" ]
+if [ "$PARTS" -eq "2" ]
 then
 mkdir $START_DIR/initramfstmp
 export PATH_TO_SDINITRAMFS=initramfs
@@ -770,7 +741,7 @@ echo " "
 echo "Mount the partitions "
 mkdir $PATH_TO_SDBOOT
 mkdir $PATH_TO_SDROOTFS
-if [ "$PARTS" -eq "5" ]
+if [ "$PARTS" -eq "2" ]
 then
 mkdir $PATH_TO_SDINITRAMFS
 fi
@@ -789,7 +760,7 @@ echo "Emptying partitions "
 echo " "
 sudo rm -rf  $PATH_TO_SDBOOT/*
 sudo rm -rf  $PATH_TO_SDROOTFS/*
-if [ "$PARTS" -eq "5" ]
+if [ "$PARTS" -eq "2" ]
 then
 sudo rm -rf  $PATH_TO_SDINITRAMFS/*
 fi
@@ -831,7 +802,7 @@ if [ $FILEPATHOPTION -eq 1 ] ; then
 
 	#check that in the right directory
 
-	THEEVMSDK=`echo $PARSEPATH | grep -o '.*ti-sdk.*.[0-9]/'`
+	THEEVMSDK=`echo $PARSEPATH | grep -o 'ti-sdk-.*[0-9]'`
 
 	if [ $PATHVALID -eq 1 ]; then
 	echo "now installing:  $THEEVMSDK"
@@ -859,7 +830,7 @@ if [ $FILEPATHOPTION -eq 1 ] ; then
 				#echo $PATHVALID
 				if [ $PATHVALID -eq 1 ] ; then
 
-				THEEVMSDK=`echo $SDKFILEPATH | grep -o '.*ti-sdk.*.[0-9]/'`
+				THEEVMSDK=`echo $SDKFILEPATH | grep -o 'ti-sdk-.*[0-9]'`
 				echo "Is this the correct SDK: $THEEVMSDK"
 				echo ""
 				read -p 'Is this correct? [y/n] : ' ISRIGHTPATH
@@ -918,32 +889,7 @@ EOM
 		ROOTFSTAR=`ls  $ROOTFILEPARTH | grep "tisdk.*rootfs" | grep 'tar.xz' | awk {'print $1'}`
 	fi
 
-	#Make sure there is only 1 initramfs
-	CHECKNUMOFRAMFS=`ls $ROOTFILEPARTH | grep "initramfs.*debug" | grep 'cpio.gz' | grep -n '' | grep '2:' | awk {'print $1'}`
-	if [ -n "$CHECKNUMOFRAMFS" ]
-	then
-cat << EOM
-
-################################################################################
-
-   Multiple initramfs Tarballs found
-
-################################################################################
-
-EOM
-		ls $ROOTFILEPARTH | grep "initramfs.*debug" | grep 'cpio.gz' | grep -n '' | awk {'print "	" , $1'}
-		echo ""
-		read -p "Enter Number of rootfs Tarball: " TARNUMBER
-		echo " "
-		FOUNDTARFILENAME=`ls $ROOTFILEPARTH | grep "initramfs.*debug" | grep 'cpio.gz' | grep -n '' | grep "${TARNUMBER}:" | cut -c3- | awk {'print$1'}`
-		INITRAMFS=$FOUNDTARFILENAME
-
-	else
-		INITRAMFS=`ls  $ROOTFILEPARTH | grep "initramfs.*debug" | grep 'cpio.gz' | awk {'print $1'}`
-	fi
-
 	ROOTFSUSERFILEPATH=$ROOTFILEPARTH/$ROOTFSTAR
-	INITRAMFSUSERFILEPATH=$ROOTFILEPARTH/$INITRAMFS
 	BOOTPATHOPTION=1
 	ROOTFSPATHOPTION=2
 
@@ -1226,15 +1172,41 @@ then
 	sed -i '/cache/d' $PATH_TO_SDROOTFS/etc/fstab
 fi
 
-if [ "$PARTS" -eq "5" ]
+if [ "$PARTS" -eq "2" ]
 then
-	sudo cp $INITRAMFSUSERFILEPATH $START_DIR/initramfstmp
+	#Make sure there is only 1 initramfs
+	CHECKNUMOFRAMFS=`ls $ROOTFILEPARTH | grep "initramfs.*debug" | grep 'cpio.gz' | grep -n '' | grep '2:' | awk {'print $1'}`
+	if [ -n "$CHECKNUMOFRAMFS" ]
+	then
+cat << EOM
+
+################################################################################
+
+   Multiple initramfs Tarballs found
+
+################################################################################
+
+EOM
+		ls $PARSEPATH/filesystem/ | grep "initramfs.*debug" | grep 'cpio.gz' | grep -n '' | awk {'print "	" , $1'}
+		echo ""
+		read -p "Enter Number of rootfs Tarball: " TARNUMBER
+		echo " "
+		FOUNDTARFILENAME=`ls $PARSEPATH/filesystem/ | grep "initramfs.*debug" | grep 'cpio.gz' | grep -n '' | grep "${TARNUMBER}:" | cut -c3- | awk {'print$1'}`
+		INITRAMFS=$FOUNDTARFILENAME
+
+	else
+		INITRAMFS=`ls  $PARSEPATH/filesystem/ | grep "initramfs.*debug" | grep 'cpio.gz' | awk {'print $1'}`
+	fi
+
+	INITRAMFSUSERFILEPATH=$PARSEPATH/filesystem/$INITRAMFS
+	sudo cp $PARSEPATH/filesystem/*.cpio.gz $START_DIR/initramfstmp
 	cd $START_DIR/initramfstmp
 	zcat *.cpio.gz | cpio -idmv  > /dev/zero 2>&1
 	sync
 	sudo rm *.cpio.gz
-	sudo cp -r $START_DIR/initramfstmp/* $START_DIR/$PATH_TO_SDINITRAMFS
-	sudo cp -r $START_DIR/$PATH_TO_SDROOTFS/boot $START_DIR/$PATH_TO_SDINITRAMFS
+	sudo cp -r $START_DIR/$PATH_TO_SDROOTFS/boot $START_DIR/initramfstmp/
+	cd $START_DIR/initramfstmp/
+	tar -cJf ../initramfs.tar.xz *
 	cd $START_DIR
 	sync
 fi
@@ -1282,6 +1254,56 @@ then
 
 fi
 
+read -p "Do you need to copy iNAND upgrate tools(y/n): " REPLY
+if [ "$REPLY" = 'y' -o "$REPLY" = 'Y' ]; then
+	echo "[Copying iNAND upgrate tools...]"
+	mkdir -p  $PATH_TO_SDROOTFS/mk_inand
+	mkdir -p  $PATH_TO_SDROOTFS/image
+	if [ $FILEPATHOPTION -eq 1 ] ; then
+		cp $ROOTFSUSERFILEPATH $PATH_TO_SDROOTFS/image/rootfs.tar.xz
+	else
+		cd $PATH_TO_SDROOTFS/
+		tar -cJf ../rootfs.tar.xz *
+		cd $START_DIR
+		mv rootfs.tar.xz $PATH_TO_SDROOTFS/image
+	fi
+	echo "rootfs.tar.xz copied"
+	[ -f ./mk-eMMC-boot.sh ] && cp -a mk-eMMC-boot.sh  $PATH_TO_SDROOTFS/mk_inand
+	# Copy Image to dest directory
+	if [ "$BOOTIMG" != "" ] ; then
+		cp $PATH_TO_SDBOOT/u-boot.img $PATH_TO_SDROOTFS/image
+		echo "u-boot.img copied"
+	elif [ "$BOOTBIN" != "" ] ; then
+		cp $PATH_TO_SDBOOT/u-boot.bin $PATH_TO_SDROOTFS/image
+		echo "u-boot.bin copied"
+	else
+		echo "No U-Boot file found"
+	fi
+
+	echo ""
+
+	if [ "$BOOTUENV" != "" ] ; then
+		cp $PATH_TO_SDBOOT/uEnv.txt $PATH_TO_SDROOTFS/image
+		echo "uEnv.txt copied"
+	fi
+
+	mv $START_DIR/initramfs.tar.xz $PATH_TO_SDROOTFS/image/initramfs.tar.xz
+	echo "initramfs.tar.xz copied"
+
+echo ""
+echo ""
+echo "Syncing..."
+sync
+sync
+sync
+sync
+sync
+sync
+sync
+sync
+
+fi
+
 echo " "
 echo "Un-mount the partitions "
 sudo umount -f $PATH_TO_SDBOOT
@@ -1297,7 +1319,7 @@ echo "Remove created temp directories "
 sudo rm -rf $PATH_TO_TMP_DIR
 sudo rm -rf $PATH_TO_SDROOTFS
 sudo rm -rf $PATH_TO_SDBOOT
-if [ "$PARTS" -eq "5" ]
+if [ "$PARTS" -eq "2" ]
 then
 sudo rm -rf $PATH_TO_SDINITRAMFS
 sudo rm -rf $START_DIR/initramfstmp
