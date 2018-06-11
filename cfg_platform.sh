@@ -18,7 +18,8 @@ ubootcfgline=`sed -n '/'"UBOOT_MACHINE"'/=' ./Rules.make`
 sed -i ''${ubootcfgline}'c 'UBOOT_MACHINE=$CFG_UBOOT_MACHINE'' ./Rules.make
 
 #delete sgx
-if [ "${CFG_PLATFORM}" != "am335xrsb4221a1" ];then
+CFG_PLATFORM=${CFG_PLATNAME:7:7}
+if [ "${CFG_PLATFORM}" == "rsb4220" ] || [ "${CFG_PLATFORM}" == "rom3310" ];then
 sgxline=`sed -n '/'"# ti-sgx-ddk-km module"'/=' ./Makefile`
 sgxend=`expr ${sgxline} + 24`
 sed -i ''${sgxline}','${sgxend}'d' ./Makefile
